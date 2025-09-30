@@ -8,8 +8,8 @@ namespace Documents
         {
             Report r = new Report
             {
-                Title = "Annual Report",
-                Content = "This is the annual report content.",
+                Title = "Report",
+                Content = "I'd like to report to thr manager!",
                 Author = "Alice"
             };
             Console.WriteLine(r.Print());
@@ -18,7 +18,7 @@ namespace Documents
             Note n = new Note
             {
                 Title = "Reminder",
-                Content = "Buy milk"
+                Content = "Eat some food"
             };
             n.Pin();
             Console.WriteLine(n.Print());
