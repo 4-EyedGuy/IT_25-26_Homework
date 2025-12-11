@@ -1,0 +1,14 @@
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\bin\Debug\net9.0\8.exe
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\bin\Debug\net9.0\8.deps.json
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\bin\Debug\net9.0\8.runtimeconfig.json
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\bin\Debug\net9.0\8.dll
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\bin\Debug\net9.0\8.pdb
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\obj\Debug\net9.0\8.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\obj\Debug\net9.0\8.AssemblyInfoInputs.cache
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\obj\Debug\net9.0\8.AssemblyInfo.cs
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\obj\Debug\net9.0\8.csproj.CoreCompileInputs.cache
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\obj\Debug\net9.0\8.dll
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\obj\Debug\net9.0\refint\8.dll
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\obj\Debug\net9.0\8.pdb
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\obj\Debug\net9.0\8.genruntimeconfig.cache
+C:\Users\shura\Desktop\Coding 2025-2026\Agile\8\8\obj\Debug\net9.0\ref\8.dll
