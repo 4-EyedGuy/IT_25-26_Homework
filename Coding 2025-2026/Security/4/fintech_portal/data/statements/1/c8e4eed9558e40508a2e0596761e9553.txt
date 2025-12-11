@@ -1,0 +1,2 @@
+Bank statement for account DEMO0001
+Owner: client_bob
