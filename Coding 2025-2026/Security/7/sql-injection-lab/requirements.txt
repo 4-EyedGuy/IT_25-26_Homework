@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+asyncpg
+python-dotenv
+bcrypt
+pydantic
+pytest
+httpx
+pytest-asyncio
+aiosqlite
+asgi-lifespan
+SQLAlchemy
+psycopg2-binary
+asyncpg
