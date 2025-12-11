@@ -1,19 +1,27 @@
+from os import getenv
+from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
-import os
-from dotenv import load_dotenv
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from typing import AsyncGenerator
 
 load_dotenv()
-DATABASE_URL = "postgresql+psycopg2://user:admin@localhost:5432/testdb"
 
-engine = create_engine(DATABASE_URL, echo=False)
+DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+async_engine = create_async_engine(
+    DATABASE_URL, 
+    echo=True,
+    connect_args={"check_same_thread": False},
+)
+
+AsyncSessionLocal = sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
 
 Base = declarative_base()
 
-def get_session():
-    with SessionLocal() as session:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
         yield session

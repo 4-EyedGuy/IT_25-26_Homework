@@ -1,28 +1,41 @@
-from fastapi import FastAPI, Depends, HTTPException, Query, Path
-from typing import Annotated, Any
+# app/main.py
+
+# Задача найти уязвимости SQL-инъекций и криптографические проблемы и исправить их.
+# Я решил пойти по хардкорному пути и всё переписать на SQLAlchemy ORM с async-поддержкой.
+# Команды очень противные (alembic мой любимый), но миграция прошла успешно.
+
+# ORM автоматически параметризирует запросы, что защищает от SQL-инъекций, т.к. невозможно внедрить SQL-код через параметры.
+
+# Также я добавил валидацию Pydantic для входных данных (path/query params).
+# Она не позволит передать некорректные типы (например, строку вместо числа).
+
+# Плюс выявились уязвимости в хэшировании паролей и токенов.
+# MD5 легко взламывается, поэтому я его заменил на bcrypt и argon2.
+# В базе хранятся bcrypt-хэши, а не открытые пароли или токены.
+
+from fastapi import FastAPI, Depends, HTTPException, Path, Query
 from .db import get_pool, close_pool
-from .auth import get_user_by_token
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
-import hashlib
 import secrets
-
-from fastapi import Depends
+import bcrypt
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-import hashlib, secrets
 from .db_orm import get_session
 from .models import User, Token, Order, Good
+from .auth import get_user_by_token
+from sqlalchemy import select
+
 
 pool = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global pool
-    pool = await get_pool()
-    yield
-    pool = None
-    await close_pool()
+    await get_pool()
+    try:
+        yield
+    finally:
+        await close_pool()
 
 app = FastAPI(title="SQLi Lab (safe edition)", lifespan=lifespan)
 
@@ -32,42 +45,80 @@ class AuthRequest(BaseModel):
 
 @app.post("/auth/token")
 async def auth_token(body: AuthRequest, session: AsyncSession = Depends(get_session)):
-    pass_hash = hashlib.md5(body.password.encode()).hexdigest()
-    stmt = select(User).where(User.name == body.name, User.password_hash == pass_hash)
-    user = (await session.execute(stmt)).scalar_one_or_none()
-    if not user:
+    stmt = select(User).where(User.name == body.name)
+    user = (await session.execute(stmt)).scalars().one_or_none()
+    
+    if not user or not bcrypt.checkpw(body.password.encode(), user.password_hash.encode()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     stmt_token = select(Token).where(Token.user_id == user.id, Token.is_valid == True).limit(1)
-    token_obj = (await session.execute(stmt_token)).scalar_one_or_none()
-    
+    token_obj = (await session.execute(stmt_token)).scalars().one_or_none()
+
     if not token_obj:
         token_value = secrets.token_urlsafe(64)
-        new_token = Token(user_id=user.id, value=token_value)
+        token_hash = bcrypt.hashpw(token_value.encode(), bcrypt.gensalt()).decode()
+        new_token = Token(user_id=user.id, value=token_hash)
         session.add(new_token)
         await session.commit()
     else:
-        token_value = token_obj.value
+        token_value = secrets.token_urlsafe(64)
+        token_hash = bcrypt.hashpw(token_value.encode(), bcrypt.gensalt()).decode()
+        token_obj.value = token_hash
+        await session.commit()
 
     return {"token": token_value}
 
 @app.get("/orders")
-async def list_orders(user: dict = Depends(get_user_by_token), limit: int = 10, offset: int = 0, session: AsyncSession = Depends(get_session)):
-    stmt = select(Order).where(Order.user_id == user["id"]).order_by(Order.created_at.desc()).limit(limit).offset(offset)
+async def get_orders(
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_session),
+    current_user = Depends(get_user_by_token)
+):
+
+    stmt = (
+        select(Order)
+        .where(Order.user_id == current_user["id"])
+        .offset(offset)
+        .limit(limit)
+    )
+
     orders = (await session.execute(stmt)).scalars().all()
-    return [{"id": o.id, "user_id": o.user_id, "created_at": o.created_at.isoformat()} for o in orders]
+
+    return [
+        {
+            "id": o.id,
+            "created_at": o.created_at.isoformat(),
+            "goods": [
+                {"id": g.id, "name": g.name, "count": g.count, "price": g.price}
+                for g in o.goods
+            ]
+        }
+        for o in orders
+    ]
 
 @app.get("/orders/{order_id}")
-async def order_details(user: dict = Depends(get_user_by_token), order_id: int = Path(...), session: AsyncSession = Depends(get_session)):
-    stmt = select(Order).where(Order.id == order_id, Order.user_id == user["id"])
-    order = (await session.execute(stmt)).scalar_one_or_none()
+async def get_order(
+    order_id: int = Path(..., ge=1),
+    session: AsyncSession = Depends(get_session),
+    current_user = Depends(get_user_by_token)
+):
+
+    stmt = select(Order).where(
+        Order.id == order_id,
+        Order.user_id == current_user["id"]
+    )
+
+    order = (await session.execute(stmt)).scalars().one_or_none()
+
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    
-    stmt_goods = select(Good).where(Good.order_id == order_id)
-    goods = (await session.execute(stmt_goods)).scalars().all()
-    
+
     return {
-        "order": {"id": order.id, "user_id": order.user_id, "created_at": order.created_at.isoformat()},
-        "goods": [{"id": g.id, "name": g.name, "count": g.count, "price": g.price} for g in goods]
+        "id": order.id,
+        "created_at": order.created_at.isoformat(),
+        "goods": [
+            {"id": g.id, "name": g.name, "count": g.count, "price": g.price}
+            for g in order.goods
+        ]
     }

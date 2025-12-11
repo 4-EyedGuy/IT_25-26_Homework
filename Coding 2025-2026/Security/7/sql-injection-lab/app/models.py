@@ -2,14 +2,15 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, F
 from sqlalchemy.orm import relationship
 from .db_orm import Base
 from datetime import datetime
-from sqlalchemy import Column, Integer, String
-from .db_orm import Base
 
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
-    username = Column(String(50))
-    password = Column(String(255))
+    name = Column(String(50), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+
+    tokens = relationship("Token", back_populates="user", cascade="all, delete-orphan")
+    orders = relationship("Order", back_populates="user", cascade="all, delete-orphan")
 
 class Token(Base):
     __tablename__ = "tokens"
@@ -20,12 +21,13 @@ class Token(Base):
     user = relationship("User", back_populates="tokens")
 
 class Order(Base):
+    """Модель заказа с привязкой к пользователю"""
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     user = relationship("User", back_populates="orders")
-    goods = relationship("Good", back_populates="order")
+    goods = relationship("Good", back_populates="order", cascade="all, delete-orphan")
 
 class Good(Base):
     __tablename__ = "goods"
